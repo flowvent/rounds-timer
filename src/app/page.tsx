@@ -1,1 +1,161 @@
-"use client"; import { useEffect, useState, useRef } from "react"; import { useTimerStore } from "@/store/timer-store"; import { formatTime } from "@/lib/utils"; import { Zap, Play, Pause, Save, History, Trash2, X } from "lucide-react"; import { motion, AnimatePresence } from "framer-motion"; export default function RoundsTimerApp() { const { timeCap, rounds, results, calculate, history, saveToHistory, clearHistory } = useTimerStore(); const [localCap, setLocalCap] = useState(timeCap); const [localRounds, setLocalRounds] = useState(rounds); const [isRunning, setIsRunning] = useState(false); const [timeLeft, setTimeLeft] = useState(0); const [currentRound, setCurrentRound] = useState(1); const [showHistory, setShowHistory] = useState(false); const timerRef = useRef<ReturnType<typeof setInterval> | null>(null); useEffect(() => { calculate(localCap, localRounds); }, [localCap, localRounds, calculate]); const startTimer = () => { if (!results) return; setTimeLeft(results.timePerRound); setIsRunning(true); }; const stopTimer = () => { setIsRunning(false); if (timerRef.current) clearInterval(timerRef.current); }; useEffect(() => { if (isRunning && timeLeft > 0) { timerRef.current = setInterval(() => setTimeLeft(t => t - 1), 1000); } else if (timeLeft === 0 && isRunning) { if (currentRound < localRounds) { setCurrentRound(r => r + 1); setTimeLeft(results.timePerRound); if(navigator.vibrate) navigator.vibrate([200, 100, 200]); } else { stopTimer(); } } return () => clearInterval(timerRef.current); }, [isRunning, timeLeft]); return ( <div className="min-h-screen bg-black text-white p-6 font-sans overflow-x-hidden"> <div className="max-w-md mx-auto flex flex-col gap-6"> <header className="flex justify-between items-center pt-4"> <div className="flex items-center gap-2"><Zap className="text-orange-500" fill="currentColor" /><h1 className="text-xl font-black italic">ROUNDS.PACE</h1></div> <button onClick={() => setShowHistory(true)} className="p-2 bg-zinc-900 rounded-full text-zinc-400 hover:text-white"><History size={20}/></button> </header> {!isRunning ? ( <> <div className="grid gap-4"> <div className="bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-800"> <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block tracking-widest">Time Cap</label> <input type="text" value={localCap} onChange={(e) => setLocalCap(e.target.value)} className="w-full bg-transparent text-5xl font-mono font-bold text-orange-500 outline-none" /> </div> <div className="bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-800"> <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block tracking-widest">Rondas</label> <input type="number" value={localRounds} onChange={(e) => setLocalRounds(Number(e.target.value))} className="w-full bg-transparent text-5xl font-mono font-bold outline-none" /> </div> </div> {results && ( <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-orange-600 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden"> <p className="text-orange-200 text-xs font-bold uppercase mb-1">Ritmo Sugerido</p> <h2 className="text-7xl font-black italic">{formatTime(results.timePerRound)}</h2> <div className="flex justify-between mt-4 pt-4 border-t border-orange-500/50 text-[10px] font-bold uppercase"> <span>Sobrante: +{results.remainder}s</span> <span>Exacto: {results.exactDecimal}s</span> </div> <button onClick={() => {saveToHistory(); alert("Guardado en historial");}} className="absolute top-6 right-6 p-2 bg-orange-700/50 rounded-full hover:bg-orange-800 transition-colors"><Save size={18}/></button> </motion.div> )} </> ) : ( <div className="flex flex-col items-center justify-center py-12"> <p className="text-orange-500 font-black text-xl mb-2 tracking-tighter">RONDA {currentRound} / {localRounds}</p> <h2 className="text-[10rem] font-black leading-none italic tabular-nums">{formatTime(timeLeft)}</h2> </div> )} <button onClick={isRunning ? stopTimer : startTimer} className={`w-full py-6 rounded-[2rem] text-xl font-black flex items-center justify-center gap-3 transition-all ${isRunning ? "bg-zinc-800 text-white" : "bg-white text-black active:scale-95"}`}> {isRunning ? <Pause fill="white" /> : <Play fill="black" />} {isRunning ? "PAUSAR" : "INICIAR WORKOUT"} </button> <AnimatePresence> {showHistory && ( <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25 }} className="fixed inset-0 bg-black z-50 p-6 flex flex-col"> <div className="flex justify-between items-center mb-8"> <h2 className="text-2xl font-black italic">HISTORIAL</h2> <button onClick={() => setShowHistory(false)} className="p-2 bg-zinc-900 rounded-full"><X/></button> </div> <div className="flex-1 overflow-y-auto space-y-4"> {history.length === 0 && <p className="text-zinc-500 text-center py-12 uppercase text-xs font-bold tracking-widest">No hay registros</p>} {history.map((item, i) => ( <div key={i} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800"> <div className="flex justify-between items-start mb-2"> <span className="text-orange-500 font-black text-2xl">{formatTime(item.timePerRound)}</span> <span className="text-[10px] text-zinc-500 font-bold uppercase">{item.date}</span> </div> <p className="text-xs text-zinc-400 font-bold uppercase tracking-widest">Cap: {item.cap} | Rondas: {item.rounds}</p> </div> ))} </div> {history.length > 0 && ( <button onClick={clearHistory} className="mt-4 flex items-center justify-center gap-2 text-red-500 font-bold text-xs uppercase p-4"><Trash2 size={14}/> Borrar todo</button> )} </motion.div> )} </AnimatePresence> </div> </div> ); }
+"use client";
+import { useEffect, useState, useRef } from "react";
+import { useTimerStore } from "@/store/timer-store";
+import { formatTime } from "@/lib/utils";
+import { Zap, Play, Pause, Save, History, Trash2, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+export default function RoundsTimerApp() {
+  const { timeCap, rounds, results, calculate, history, saveToHistory, clearHistory } = useTimerStore();
+  const [localCap, setLocalCap] = useState(timeCap);
+  const [localRounds, setLocalRounds] = useState(rounds);
+  const [isRunning, setIsRunning] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [currentRound, setCurrentRound] = useState(1);
+  const [showHistory, setShowHistory] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    calculate(localCap, localRounds);
+  }, [localCap, localRounds, calculate]);
+
+  const startTimer = () => {
+    if (!results) return;
+    setTimeLeft(results.timePerRound);
+    setIsRunning(true);
+  };
+
+  const stopTimer = () => {
+    setIsRunning(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  useEffect(() => {
+    if (isRunning && timeLeft > 0) {
+      timerRef.current = setInterval(() => setTimeLeft(t => t - 1), 1000);
+    } else if (timeLeft === 0 && isRunning) {
+      if (currentRound < localRounds) {
+        setCurrentRound(r => r + 1);
+        if (results) setTimeLeft(results.timePerRound);
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      } else {
+        stopTimer();
+      }
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isRunning, timeLeft]);
+
+  return (
+    <div className="min-h-screen bg-black text-white p-6 font-sans overflow-x-hidden">
+      <div className="max-w-md mx-auto flex flex-col gap-6">
+        <header className="flex justify-between items-center pt-4">
+          <div className="flex items-center gap-2">
+            <Zap className="text-orange-500" fill="currentColor" />
+            <h1 className="text-xl font-black italic">ROUNDS.PACE</h1>
+          </div>
+          <button onClick={() => setShowHistory(true)} className="p-2 bg-zinc-900 rounded-full text-zinc-400 hover:text-white">
+            <History size={20} />
+          </button>
+        </header>
+
+        {!isRunning ? (
+          <>
+            <div className="grid gap-4">
+              <div className="bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-800">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block tracking-widest">Time Cap</label>
+                <input
+                  type="text"
+                  value={localCap}
+                  onChange={(e) => setLocalCap(e.target.value)}
+                  className="w-full bg-transparent text-5xl font-mono font-bold text-orange-500 outline-none"
+                />
+              </div>
+              <div className="bg-zinc-900/50 p-6 rounded-[2rem] border border-zinc-800">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block tracking-widest">Rondas</label>
+                <input
+                  type="number"
+                  value={localRounds}
+                  onChange={(e) => setLocalRounds(Number(e.target.value))}
+                  className="w-full bg-transparent text-5xl font-mono font-bold outline-none"
+                />
+              </div>
+            </div>
+
+            {results && (
+              <motion.div
+                layout
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="bg-orange-600 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden"
+              >
+                <p className="text-orange-200 text-xs font-bold uppercase mb-1">Ritmo Sugerido</p>
+                <h2 className="text-7xl font-black italic">{formatTime(results.timePerRound)}</h2>
+                <div className="flex justify-between mt-4 pt-4 border-t border-orange-500/50 text-[10px] font-bold uppercase">
+                  <span>Sobrante: +{results.remainder}s</span>
+                  <span>Exacto: {results.exactDecimal}s</span>
+                </div>
+                <button
+                  onClick={() => { saveToHistory(); alert("Guardado en historial"); }}
+                  className="absolute top-6 right-6 p-2 bg-orange-700/50 rounded-full hover:bg-orange-800 transition-colors"
+                >
+                  <Save size={18} />
+                </button>
+              </motion.div>
+            )}
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12">
+            <p className="text-orange-500 font-black text-xl mb-2 tracking-tighter">RONDA {currentRound} / {localRounds}</p>
+            <h2 className="text-[10rem] font-black leading-none italic tabular-nums">{formatTime(timeLeft)}</h2>
+          </div>
+        )}
+
+        <button
+          onClick={isRunning ? stopTimer : startTimer}
+          className={`w-full py-6 rounded-[2rem] text-xl font-black flex items-center justify-center gap-3 transition-all ${isRunning ? "bg-zinc-800 text-white" : "bg-white text-black active:scale-95"}`}
+        >
+          {isRunning ? <Pause fill="white" /> : <Play fill="black" />}
+          {isRunning ? "PAUSAR" : "INICIAR WORKOUT"}
+        </button>
+
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25 }}
+              className="fixed inset-0 bg-black z-50 p-6 flex flex-col"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-black italic">HISTORIAL</h2>
+                <button onClick={() => setShowHistory(false)} className="p-2 bg-zinc-900 rounded-full"><X /></button>
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-4">
+                {history.length === 0 && (
+                  <p className="text-zinc-500 text-center py-12 uppercase text-xs font-bold tracking-widest">No hay registros</p>
+                )}
+                {history.map((item, i) => (
+                  <div key={i} className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-orange-500 font-black text-2xl">{formatTime(item.timePerRound)}</span>
+                      <span className="text-[10px] text-zinc-500 font-bold uppercase">{item.date}</span>
+                    </div>
+                    <p className="text-xs text-zinc-400 font-bold uppercase tracking-widest">Cap: {item.cap} | Rondas: {item.rounds}</p>
+                  </div>
+                ))}
+              </div>
+              {history.length > 0 && (
+                <button onClick={clearHistory} className="mt-4 flex items-center justify-center gap-2 text-red-500 font-bold text-xs uppercase p-4">
+                  <Trash2 size={14} /> Borrar todo
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
